@@ -11,6 +11,13 @@ import UIKit
 extension Double {
     var degreeToRadians: Double { return Double(self) * M_PI / 180 }
     var radianToDegrees: Double { return Double(self) * 180 / M_PI }
+    
+    // x: long side, y: short side
+    static func tanθToDegrees(x x: CGFloat, y: CGFloat) -> Double {
+        let radian = Double(atan2(y, x))
+        let degrees = radian.radianToDegrees
+        return degrees
+    }
 }
 
 final class ViewController: UIViewController {
@@ -55,52 +62,56 @@ final class ViewController: UIViewController {
         
         // --------------------　名刺の4点取得　----------------------
         
-        let widthX = meishiView.bounds.width * cos(CGFloat(M_PI) * 10 / 180)
-        let widthY = meishiView.bounds.width * sin(CGFloat(M_PI) * 10 / 180)
-        let heightX = meishiView.bounds.height * sin(CGFloat(M_PI) * 10 / 180)
-        let heightY = meishiView.bounds.height * cos(CGFloat(M_PI) * 10 / 180)
-        let p0 = (x: meishiView.frame.minX, y: meishiView.frame.minY + widthY)
-        let p1 = (x: meishiView.frame.minX + widthX, y: meishiView.frame.minY)
-        let p2 = (x: meishiView.frame.minX + meishiView.frame.width, y: meishiView.frame.minY + heightY)
-        let p3 = (x: meishiView.frame.minX + heightX, y: meishiView.frame.minY + meishiView.frame.height)
+        let widthX0 = meishiView.bounds.width * cos(CGFloat(M_PI) * 10 / 180)
+        let widthY0 = meishiView.bounds.width * sin(CGFloat(M_PI) * 10 / 180)
+        let heightX0 = meishiView.bounds.height * sin(CGFloat(M_PI) * 10 / 180)
+        let heightY0 = meishiView.bounds.height * cos(CGFloat(M_PI) * 10 / 180)
+        let p0 = (x: meishiView.frame.minX + 10, y: meishiView.frame.minY + widthY0 + 10)
+        let p1 = (x: meishiView.frame.minX + widthX0, y: meishiView.frame.minY)
+        let p2 = (x: meishiView.frame.minX + meishiView.frame.width, y: meishiView.frame.minY + heightY0)
+        let p3 = (x: meishiView.frame.minX + heightX0, y: meishiView.frame.minY + meishiView.frame.height)
         // --------------------------------------------------------
         
         // まずは傾きを4点から計算(4つの傾きの平均値)
         // 4つのdgreeを計算
-        let maxX = p1.x > p2.x ? p1.x : p2.x
-        let maxY = p2.y > p3.y ? p2.y : p3.y
-        let minX = p0.x < p3.x ? p0.x : p3.x
-        let minY = p1.y < p0.y ? p1.y : p0.y
-        var degree1 = 0.0
-        var degree2 = 0.0
-        var degree3 = 0.0
-        var degree4 = 0.0
-        if minY == p1.y {
-            let x = p1.x - p0.x
-            let y = p0.y - p1.y
-            let radian = Double(atan2(y, x))
-            degree1 = radian.radianToDegrees
-        } else {
-            let x = p1.x - p0.x
-            let y = p1.y - p0.y
-            let tanθ = y / x
-        }
-        degree = 10 // 求めた！
+        let maxX = p1.x > p2.x ? p1 : p2
+        let maxY = p2.y > p3.y ? p2 : p3
+        let minX = p0.x < p3.x ? p0 : p3
+        let minY = p1.y < p0.y ? p1 : p0
+        
+        let x1 = minY.x - minX.x, y1 = minX.y - minY.y
+        let degree1 = Double.tanθToDegrees(x: x1, y: y1)
+        let x2 = maxX.y - minY.y, y2 = maxX.x - minY.x
+        let degree2 = Double.tanθToDegrees(x: x2, y: y2)
+        let x3 = maxX.x - maxY.x, y3 = maxY.y - maxX.y
+        let degree3 = Double.tanθToDegrees(x: x3, y: y3)
+        let x4 = maxY.y - minX.y, y4 = maxY.x - minX.x
+        let degree4 = Double.tanθToDegrees(x: x4, y: y4)
+        
+        print("degree1: \(degree1)")
+        print("degree2: \(degree2)")
+        print("degree3: \(degree3)")
+        print("degree4: \(degree4)")
+        degree = (degree1 + degree2 + degree3 + degree4) / 4
+        print("degree: \(degree)")
         
         // 4点からframeを求める
         guard let degree = degree else { return }
-        let θ = CGFloat(degree.degreeToRadians) // θ = π * d / 180
+        let θ = CGFloat(degree.degreeToRadians)
         let nameCardWidth1 = (p1.x - p0.x) / cos(θ)
         let nameCardWidth2 = (p2.x - p3.x) / cos(θ)
         let nameCardHeight1 = (p3.y - p0.y) / cos(θ)
         let nameCardHeight2 = (p2.y - p1.y) / cos(θ)
         let nameCardWidth = (nameCardWidth1 + nameCardWidth2) / 2
         let nameCardHeight = (nameCardHeight1 + nameCardHeight2) / 2
-        // widthX、widthY、heightX、heigtYを求めてから
+        let widthX = nameCardWidth * cos(CGFloat(M_PI) * CGFloat(degree) / 180)
+        let widthY = nameCardWidth * sin(CGFloat(M_PI) * CGFloat(degree) / 180)
+        let heightX = nameCardHeight * sin(CGFloat(M_PI) * 10 / 180)
+        let heightY = nameCardHeight * cos(CGFloat(M_PI) * 10 / 180)
         let frameWidth = widthX + heightX
         let frameHeight = widthY + heightY
-        let centerX = minX + (frameWidth / 2)
-        let centerY = minY + (frameHeight / 2)
+        let centerX = minX.x + (frameWidth / 2)
+        let centerY = minY.y + (frameHeight / 2)
         let centerPoint = CGPoint(x: centerX, y: centerY)
         nameCardLayer.contents = UIImage(named: "meisi.jpg")?.CGImage
         nameCardLayer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
